@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Profile{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <!-- Flash Message Section -->
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div id="flash-message" class="alert alert-info">
+          {% for message in messages %}
+            {{ message }}
+          {% endfor %}
+        </div>
+        <script>
+          setTimeout(function() {
+            var flash = document.getElementById("flash-message");
+            if (flash) {
+              flash.style.display = "none";
+            }
+          }, 3000);
+        </script>
+      {% endif %}
+    {% endwith %}
+    <!-- Profile Update Section -->
+    <h2>Update Profile</h2>
+    <form method="POST" action="{{ url_for('profile') }}">
+        <input type="hidden" name="action" value="update">
+        <div class="mb-3">
+            <label>User ID</label>
+            <input type="text" name="user_id" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label>New Name</label>
+            <input type="text" name="user_name" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Update</button>
+    </form>
+    <hr>
+    <!-- Delete User Section -->
+    <h2>Delete User</h2>
+    <form method="POST" action="{{ url_for('profile') }}">
+        <input type="hidden" name="action" value="delete">
+        <div class="mb-3">
+            <label>User ID</label>
+            <input type="text" name="user_id" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-danger">Delete</button>
+    </form>
+</div>
+{% endblock %}

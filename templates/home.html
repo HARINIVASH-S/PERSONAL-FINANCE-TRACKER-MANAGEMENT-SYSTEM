@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Home</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-image: url("{{ url_for('static', filename='images/img1.jpeg') }}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            min-height: 100vh;
+            color: rgb(250, 249, 249);
+        }
+        .navbar {
+            background-color: rgba(44, 51, 58, 0.85);
+            border-radius: 12px;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            max-width: 90%;
+            margin: 30px auto;
+        }
+        .navbar a {
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            text-decoration: none;
+            padding: 8px 12px;
+            transition: color 0.3s ease, transform 0.2s ease;
+        }
+        .navbar a:hover {
+            color: #ffcc00;
+            transform: scale(1.05);
+        }
+        .welcome-box {
+            text-align: center;
+            margin-top: 60px;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 40px;
+            border-radius: 12px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .text {
+            color: #ffffff; 
+            background-color: rgba(0, 0, 0, 0.6); 
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-align: left;
+            margin: 30px auto;
+        }
+        .text2 {
+            color: #0c0a0a;
+        }
+    </style>
+</head>
+<body>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="alert alert-success alert-dismissible fade show w-75 mx-auto mt-4" role="alert" id="flash-message">
+                {{ messages[0] }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <script>
+                // Set a timeout to hide the flash message after 5 seconds
+                setTimeout(function() {
+                    const flashMessage = document.getElementById('flash-message');
+                    if (flashMessage) {
+                        flashMessage.style.display = 'none';
+                    }
+                }, 5000); // 5000ms = 5 seconds
+            </script>
+        {% endif %}
+    {% endwith %}
+    <div class="text2">
+        <center><h1>Personal Finance Tracker</h1></center>
+    </div>
+    <nav class="navbar mb-4">
+        <a href="{{ url_for('home') }}">HOME</a>
+        <a href="{{ url_for('signup') }}">Sign Up</a>
+        <a href="{{ url_for('transaction') }}">Add Income</a>
+        <a href="{{ url_for('withdraw') }}">Withdraw</a>
+        <a href="{{ url_for('view_transactions') }}">View Transactions</a>
+        <a href="{{ url_for('profile') }}">Profile</a> <!-- ✅ Updated Link -->
+    </nav>
+    <div class="welcome-box">
+        <h2>Welcome to Personal Finance Tracker</h2>
+        <p>Track your income, expenses, and manage your finances with ease!</p>
+    </div>
+    <div class="text">
+        <h3>Concepts Used:</h3>
+        <h5>Python (Flask):</h5>
+        <ul>
+            <li>Handles routing, form submissions, and page rendering.</li>
+            <li>Manages backend logic for user registration, income/expense entry, and balance calculation.</li>
+            <li>Connects to MySQL database using <code>mysql-connector</code>.</li>
+        </ul>
+
+        <h5>QUERY:</h5>
+        <ul>
+            <li>Stores user data and transaction details in structured tables (<code>users</code>, <code>transactions</code>).</li>
+            <li>Performs SQL queries to insert, retrieve, and aggregate transaction data.</li>
+        </ul>
+
+        <h5>XAMPP:</h5>
+        <ul>
+            <li>Provides a local server environment to run MySQL.</li>
+            <li>Simplifies MySQL database setup and access through phpMyAdmin.</li>
+        </ul>
+
+        <h5>HTML & CSS:</h5>
+        <ul>
+            <li>Structures and styles the web pages.</li>
+            <li>Includes form inputs, tables, headings, and navigation bar.</li>
+            <li>Uses CSS for custom styling (e.g., background images, hover effects, layout design).</li>
+        </ul>
+
+        <h5>Finance Logic:</h5>
+        <ul>
+            <li>Distinguishes between income (<code>entry</code>) and expenses (<code>withdraw</code>).</li>
+            <li>Calculates total balance per user by aggregating transaction types.</li>
+        </ul>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block title %}View Transactions{% endblock %}
+{% block content %}
+<style>
+    .text1 {
+        color: rgb(244, 238, 238);
+    }
+</style>
+<!-- Flash Message -->
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <div class="alert alert-success alert-dismissible fade show w-75 mx-auto mt-4" role="alert" id="flash-message">
+            {{ messages[0] }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <script>
+            setTimeout(function () {
+                const flashMessage = document.getElementById('flash-message');
+                if (flashMessage) {
+                    flashMessage.style.display = 'none';
+                }
+            }, 5000);
+        </script>
+    {% endif %}
+{% endwith %}
+<div class="text1 text-center mt-4">
+    <h2>Personal Finance Tracker</h2>
+</div>
+<!-- Form -->
+<form method="POST" class="mb-4 mt-4">
+    <label>Enter User ID:</label>
+    <input type="text" name="user_id" required>
+    <button type="submit" class="btn btn-primary">View Transactions</button>
+</form>
+<!-- Transaction Table -->
+{% if transactions is not none %}
+    {% if transactions %}
+        <h4>User: <strong>{{ transactions[0][0] }}</strong> (User ID: {{ user_id }})</h4>
+        <h5>Total Balance: ₹{{ "%.2f"|format(balance) }}</h5>
+        <hr>
+        <div class="table-responsive">
+            <table class="table table-bordered table-dark table-striped">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>Type</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transactions %}
+                    <tr>
+                        <td>{{ t[1] }}</td>
+                        <td>{{ t[2] }}</td>
+                        <td>{{ t[3] }}</td>
+                        <td>{{ t[4] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <h5>No transactions found for User ID: {{ user_id }}</h5>
+        <h5>Total Balance: ₹{{ "%.2f"|format(balance) }}</h5>
+    {% endif %}
+{% endif %}
+
+{% endblock %}
