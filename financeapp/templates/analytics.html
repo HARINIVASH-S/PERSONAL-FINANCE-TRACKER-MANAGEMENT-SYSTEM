@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% block title %}Analytics — FinanceOS{% endblock %}
+{% block page_title %}Analytics{% endblock %}
+
+{% block content %}
+
+<!-- ── 12-month Trend ─────────────────────────────────────────────────────────── -->
+<div class="fcard mb-4">
+  <div class="section-head">
+    <div class="section-title">12-Month Income vs Expense Trend</div>
+    <span class="badge-pill badge-income">Last year</span>
+  </div>
+  <div class="chart-wrap" style="height:280px">
+    <canvas id="trendChart"></canvas>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <!-- Category Breakdown -->
+  <div class="col-12 col-lg-6">
+    <div class="fcard h-100">
+      <div class="section-head">
+        <div class="section-title">Expense by Category</div>
+      </div>
+      <div class="chart-wrap" style="height:260px">
+        <canvas id="expCatChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Income Breakdown -->
+  <div class="col-12 col-lg-6">
+    <div class="fcard h-100">
+      <div class="section-head">
+        <div class="section-title">Income by Category</div>
+      </div>
+      <div class="chart-wrap" style="height:260px">
+        <canvas id="incCatChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Daily Spending -->
+<div class="fcard">
+  <div class="section-head">
+    <div class="section-title">Daily Spending — Last 30 Days</div>
+  </div>
+  <div class="chart-wrap" style="height:220px">
+    <canvas id="dailyChart"></canvas>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const trend = {{ trend | safe }};
+const catRaw = {{ cat_data | safe }};
+const daily = {{ daily | safe }};
+
+const COLORS = ['#00E5A0','#38BEFF','#FF4D6A','#FFB830','#A78BFA','#FB7185','#34D399','#60A5FA','#F472B6','#FBBF24'];
+
+// Trend Line
+buildLineChart('trendChart', trend.months, [
+  {
+    label: 'Income', data: trend.income,
+    borderColor: '#00E5A0', backgroundColor: 'rgba(0,229,160,0.08)',
+    fill: true, tension: 0.4, pointRadius: 4, pointHoverRadius: 6
+  },
+  {
+    label: 'Expense', data: trend.expense,
+    borderColor: '#FF4D6A', backgroundColor: 'rgba(255,77,106,0.08)',
+    fill: true, tension: 0.4, pointRadius: 4, pointHoverRadius: 6
+  }
+]);
+
+// Category split
+const expCats = {}, incCats = {};
+catRaw.forEach(r => {
+  if (r.type === 'expense') expCats[r.cat] = (expCats[r.cat] || 0) + r.total;
+  else incCats[r.cat] = (incCats[r.cat] || 0) + r.total;
+});
+
+const expLabels = Object.keys(expCats);
+const expData   = expLabels.map(k => expCats[k]);
+const incLabels = Object.keys(incCats);
+const incData   = incLabels.map(k => incCats[k]);
+
+if (expLabels.length) {
+  buildDoughnutChart('expCatChart', expLabels, expData, COLORS);
+} else {
+  document.getElementById('expCatChart').closest('.chart-wrap').innerHTML =
+    '<div style="display:grid;place-items:center;height:100%;color:var(--text-3)">No expense data</div>';
+}
+
+if (incLabels.length) {
+  buildDoughnutChart('incCatChart', incLabels, incData, COLORS.slice(3));
+} else {
+  document.getElementById('incCatChart').closest('.chart-wrap').innerHTML =
+    '<div style="display:grid;place-items:center;height:100%;color:var(--text-3)">No income data</div>';
+}
+
+// Daily bar
+const ctx = document.getElementById('dailyChart');
+if (ctx) {
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: daily.map(d => d.day),
+      datasets: [{
+        label: 'Daily Expense',
+        data: daily.map(d => d.total),
+        backgroundColor: 'rgba(255,77,106,0.6)',
+        borderRadius: 5,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#8B90A6', maxTicksLimit: 12 } },
+        y: {
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { color: '#8B90A6', callback: v => '₹' + v.toLocaleString() }
+        }
+      }
+    }
+  });
+}
+</script>
+{% endblock %}

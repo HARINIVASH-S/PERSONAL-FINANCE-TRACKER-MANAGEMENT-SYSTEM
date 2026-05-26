@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block title %}Goals — FinanceOS{% endblock %}
+{% block page_title %}Financial Goals{% endblock %}
+
+{% block content %}
+
+<div class="row g-4">
+  <!-- Add Goal -->
+  <div class="col-12 col-lg-4">
+    <div class="fcard">
+      <div class="section-title mb-4">New Goal</div>
+      <form method="POST" action="{{ url_for('goals') }}">
+        <input type="hidden" name="action" value="add">
+        <div class="mb-3">
+          <label class="form-label-custom">Goal Name</label>
+          <input type="text" name="name" class="form-control-custom" placeholder="e.g. Emergency Fund" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label-custom">Target Amount ({{ currency }})</label>
+          <input type="number" name="target_amount" step="0.01" min="1" class="form-control-custom" placeholder="50000" required>
+        </div>
+        <div class="mb-4">
+          <label class="form-label-custom">Deadline (optional)</label>
+          <input type="date" name="deadline" class="form-control-custom">
+        </div>
+        <button type="submit" class="btn-accent w-100">
+          <i class="bi bi-trophy-fill"></i> Create Goal
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Goals Grid -->
+  <div class="col-12 col-lg-8">
+    {% if goals %}
+    <div class="row g-3">
+      {% for g in goals %}
+        {% set color = 'var(--accent)' if g.pct >= 100 else ('var(--warning)' if g.pct >= 50 else 'var(--info)') %}
+        <div class="col-12 col-sm-6">
+          <div class="goal-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+              <div>
+                <div class="goal-title">{{ g.name }}</div>
+                <div class="goal-meta">
+                  {% if g.remaining_days is not none %}
+                    {% if g.remaining_days >= 0 %}
+                      <i class="bi bi-calendar3"></i> {{ g.remaining_days }} days left
+                    {% else %}
+                      <i class="bi bi-exclamation-triangle" style="color:var(--danger)"></i> Overdue
+                    {% endif %}
+                  {% else %}
+                    <i class="bi bi-infinity"></i> No deadline
+                  {% endif %}
+                </div>
+              </div>
+              <form method="POST" onsubmit="return confirm('Delete this goal?')" style="display:inline">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="gid" value="{{ g.id }}">
+                <button type="submit" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:14px">
+                  <i class="bi bi-trash3"></i>
+                </button>
+              </form>
+            </div>
+
+            {% if g.pct >= 100 %}
+              <div style="font-size:13px;color:var(--accent);font-weight:700;margin-bottom:8px">
+                🎉 Goal Achieved!
+              </div>
+            {% endif %}
+
+            <div class="prog-bar">
+              <div class="prog-fill" data-width="{{ g.pct }}" style="width:0%;background:{{ color }}"></div>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:6px;margin-bottom:14px;color:var(--text-2)">
+              <span>{{ currency }}{{ "%.0f"|format(g.saved_amount) }} saved</span>
+              <span style="font-weight:700;color:{{ color }}">{{ g.pct }}%</span>
+              <span>{{ currency }}{{ "%.0f"|format(g.target_amount) }} goal</span>
+            </div>
+
+            {% if g.pct < 100 %}
+            <!-- Contribute -->
+            <form method="POST" action="{{ url_for('goals') }}" style="display:flex;gap:8px">
+              <input type="hidden" name="action" value="contribute">
+              <input type="hidden" name="gid" value="{{ g.id }}">
+              <input type="number" name="amount" step="0.01" min="1"
+                class="form-control-custom" style="flex:1;padding:8px 12px;font-size:13.5px"
+                placeholder="Add {{ currency }}...">
+              <button type="submit" class="btn-accent" style="padding:8px 14px;font-size:13px">
+                <i class="bi bi-plus-lg"></i>
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    {% else %}
+      <div class="fcard" style="text-align:center;padding:60px 20px">
+        <i class="bi bi-trophy" style="font-size:48px;color:var(--text-3);display:block;margin-bottom:14px"></i>
+        <div style="font-size:16px;font-weight:600;margin-bottom:6px">No goals yet</div>
+        <div style="font-size:13.5px;color:var(--text-3)">Create your first financial goal to start tracking your progress.</div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,208 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — FinanceOS{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- ── Budget Alerts ─────────────────────────────────────────────────────────── -->
+{% if budget_alerts %}
+  {% for alert in budget_alerts %}
+    <div class="budget-alert mb-3">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      <span><strong>{{ alert.category.title() }}</strong> budget is {{ alert.pct }}% used
+        ({{ currency }}{{ "%.0f"|format(alert.spent) }} / {{ currency }}{{ "%.0f"|format(alert.limit) }})
+      </span>
+    </div>
+  {% endfor %}
+{% endif %}
+
+<!-- ── Stat Cards ─────────────────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="stat-card accent-green">
+      <div class="stat-icon green"><i class="bi bi-wallet2"></i></div>
+      <div class="stat-label">Total Balance</div>
+      <div class="stat-value" data-count="{{ stats.balance }}" data-prefix="{{ currency }}">{{ currency }}0</div>
+      <div class="stat-change {% if stats.balance >= 0 %}up{% else %}down{% endif %}">
+        <i class="bi {% if stats.balance >= 0 %}bi-arrow-up-right{% else %}bi-arrow-down-right{% endif %}"></i>
+        Net all-time
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card accent-blue">
+      <div class="stat-icon blue"><i class="bi bi-arrow-down-circle-fill"></i></div>
+      <div class="stat-label">Monthly Income</div>
+      <div class="stat-value" data-count="{{ stats.monthly_income }}" data-prefix="{{ currency }}">{{ currency }}0</div>
+      <div class="stat-change up"><i class="bi bi-calendar3"></i> This month</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card accent-red">
+      <div class="stat-icon red"><i class="bi bi-arrow-up-circle-fill"></i></div>
+      <div class="stat-label">Monthly Expenses</div>
+      <div class="stat-value" data-count="{{ stats.monthly_expense }}" data-prefix="{{ currency }}">{{ currency }}0</div>
+      <div class="stat-change down"><i class="bi bi-calendar3"></i> This month</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card accent-gold">
+      <div class="stat-icon gold"><i class="bi bi-piggy-bank-fill"></i></div>
+      <div class="stat-label">Monthly Savings</div>
+      <div class="stat-value" data-count="{{ stats.savings }}" data-prefix="{{ currency }}">{{ currency }}0</div>
+      <div class="stat-change {% if stats.savings >= 0 %}up{% else %}down{% endif %}">
+        <i class="bi bi-graph-up"></i>
+        {% if stats.monthly_income > 0 %}{{ "%.0f"|format((stats.savings / stats.monthly_income)*100) }}% of income{% else %}—{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Charts Row ──────────────────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-12 col-lg-8">
+    <div class="fcard h-100">
+      <div class="section-head">
+        <div class="section-title">Income vs Expenses</div>
+        <span class="badge-pill badge-income">6 months</span>
+      </div>
+      <div class="chart-wrap" style="height:240px">
+        <canvas id="overviewChart"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-4">
+    <div class="fcard h-100">
+      <div class="section-head">
+        <div class="section-title">Spending by Category</div>
+      </div>
+      <div class="chart-wrap" style="height:240px">
+        <canvas id="catChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Recent + Goals + Tip ───────────────────────────────────────────────────── -->
+<div class="row g-3">
+
+  <!-- Recent Transactions -->
+  <div class="col-12 col-lg-5">
+    <div class="fcard">
+      <div class="section-head">
+        <div class="section-title">Recent Activity</div>
+        <a href="{{ url_for('transactions') }}" class="section-link">View all →</a>
+      </div>
+      {% if recent %}
+        {% for t in recent %}
+          <div class="txn-item">
+            <div class="txn-icon {{ t.type }}">
+              {% set icons = {'food':'bi-cup-hot-fill','transport':'bi-car-front-fill','shopping':'bi-bag-fill','salary':'bi-briefcase-fill','freelance':'bi-laptop-fill','health':'bi-heart-pulse-fill','entertainment':'bi-film','education':'bi-book-fill','utilities':'bi-lightning-fill','rent':'bi-house-fill','other':'bi-three-dots'} %}
+              <i class="bi {{ icons.get(t.category, 'bi-three-dots') }}"></i>
+            </div>
+            <div class="txn-details">
+              <div class="txn-cat">{{ t.category }}</div>
+              <div class="txn-note">{{ t.note or '—' }}</div>
+            </div>
+            <div>
+              <div class="txn-amount {{ t.type }}">
+                {% if t.type == 'income' %}+{% else %}-{% endif %}{{ currency }}{{ "%.2f"|format(t.amount) }}
+              </div>
+              <div class="txn-time">{{ t.created_at.strftime('%d %b') if t.created_at else '' }}</div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div style="color:var(--text-3);font-size:14px;padding:20px 0;text-align:center">
+          <i class="bi bi-inbox" style="font-size:32px;display:block;margin-bottom:8px"></i>
+          No transactions yet
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Goals -->
+  <div class="col-12 col-lg-4">
+    <div class="fcard">
+      <div class="section-head">
+        <div class="section-title">Financial Goals</div>
+        <a href="{{ url_for('goals') }}" class="section-link">Manage →</a>
+      </div>
+      {% if goals %}
+        {% for g in goals %}
+          {% set pct = [(g.saved_amount / g.target_amount * 100), 100] | min if g.target_amount else 0 %}
+          <div style="margin-bottom:18px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span style="font-weight:600;font-size:14px">{{ g.name }}</span>
+              <span class="goal-pct" style="font-size:13px;font-weight:700;color:var(--accent)">{{ "%.0f"|format(pct) }}%</span>
+            </div>
+            <div style="font-size:12px;color:var(--text-3);margin-bottom:6px">
+              {{ currency }}{{ "%.0f"|format(g.saved_amount) }} / {{ currency }}{{ "%.0f"|format(g.target_amount) }}
+            </div>
+            <div class="prog-bar">
+              <div class="prog-fill {% if pct > 80 %}{% elif pct < 30 %}warning{% endif %}"
+                   data-width="{{ pct }}" style="width:0%"></div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div style="color:var(--text-3);font-size:14px;padding:20px 0;text-align:center">
+          <i class="bi bi-trophy" style="font-size:32px;display:block;margin-bottom:8px"></i>
+          No goals set yet
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- AI Tip + Quick Add -->
+  <div class="col-12 col-lg-3">
+    <!-- Tip -->
+    <div class="tip-box mb-3" id="spendingTip">
+      <div class="tip-icon"><i class="bi bi-lightbulb-fill"></i></div>
+      <div>
+        <div class="tip-label">Smart Tip</div>
+        <div class="tip-text">Loading your personalized tip…</div>
+      </div>
+    </div>
+
+    <!-- Quick Add buttons -->
+    <div class="fcard fcard-sm">
+      <div class="section-title mb-3" style="font-size:15px">Quick Actions</div>
+      <div class="d-flex flex-column gap-2">
+        <a href="{{ url_for('transactions') }}?open=income" class="btn-accent" style="justify-content:center">
+          <i class="bi bi-plus-circle-fill"></i> Add Income
+        </a>
+        <a href="{{ url_for('transactions') }}?open=expense" class="btn-ghost" style="justify-content:center">
+          <i class="bi bi-dash-circle-fill"></i> Add Expense
+        </a>
+        <a href="{{ url_for('analytics') }}" class="btn-ghost" style="justify-content:center">
+          <i class="bi bi-bar-chart-line-fill"></i> View Analytics
+        </a>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const cd = {{ chart_data | safe }};
+const catD = {{ cat_chart | safe }};
+const COLORS = ['#00E5A0','#38BEFF','#FF4D6A','#FFB830','#A78BFA','#FB7185','#34D399','#60A5FA'];
+
+buildBarChart('overviewChart', cd.labels, [
+  { label: 'Income',  data: cd.income,  backgroundColor: 'rgba(0,229,160,0.7)', borderRadius: 6, borderSkipped: false },
+  { label: 'Expense', data: cd.expense, backgroundColor: 'rgba(255,77,106,0.7)', borderRadius: 6, borderSkipped: false }
+]);
+
+if (catD.labels.length) {
+  buildDoughnutChart('catChart', catD.labels, catD.data, COLORS);
+} else {
+  const ctx = document.getElementById('catChart');
+  if (ctx) {
+    ctx.parentElement.innerHTML = '<div style="display:grid;place-items:center;height:100%;color:var(--text-3);font-size:13px">No expense data yet</div>';
+  }
+}
+</script>
+{% endblock %}

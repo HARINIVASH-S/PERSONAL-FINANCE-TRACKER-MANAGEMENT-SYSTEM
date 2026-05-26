@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ session.get('theme', 'dark') }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}FinanceOS{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+<!-- ── Toast Container ──────────────────────────────────────────────────────── -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:9999">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="toast align-items-center border-0 show mb-2
+        {% if cat == 'success' %}toast-success{% elif cat == 'danger' %}toast-danger{% elif cat == 'warning' %}toast-warning{% else %}toast-info{% endif %}"
+        role="alert" data-bs-autohide="true" data-bs-delay="4000">
+        <div class="d-flex">
+          <div class="toast-body">
+            {% if cat == 'success' %}<i class="bi bi-check-circle-fill me-2"></i>
+            {% elif cat == 'danger' %}<i class="bi bi-x-circle-fill me-2"></i>
+            {% elif cat == 'warning' %}<i class="bi bi-exclamation-triangle-fill me-2"></i>
+            {% else %}<i class="bi bi-info-circle-fill me-2"></i>{% endif %}
+            {{ msg }}
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+      </div>
+    {% endfor %}
+  {% endwith %}
+</div>
+
+<!-- ── Sidebar ───────────────────────────────────────────────────────────────── -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon"><i class="bi bi-currency-exchange"></i></div>
+    <span class="brand-name">FinanceOS</span>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+      <i class="bi bi-grid-fill"></i><span>Dashboard</span>
+    </a>
+    <a href="{{ url_for('transactions') }}" class="nav-item {% if request.endpoint == 'transactions' %}active{% endif %}">
+      <i class="bi bi-arrow-left-right"></i><span>Transactions</span>
+    </a>
+    <a href="{{ url_for('analytics') }}" class="nav-item {% if request.endpoint == 'analytics' %}active{% endif %}">
+      <i class="bi bi-bar-chart-line-fill"></i><span>Analytics</span>
+    </a>
+    <a href="{{ url_for('budget') }}" class="nav-item {% if request.endpoint == 'budget' %}active{% endif %}">
+      <i class="bi bi-wallet2"></i><span>Budget</span>
+    </a>
+    <a href="{{ url_for('goals') }}" class="nav-item {% if request.endpoint == 'goals' %}active{% endif %}">
+      <i class="bi bi-trophy-fill"></i><span>Goals</span>
+    </a>
+    <div class="nav-divider"></div>
+    <a href="{{ url_for('settings') }}" class="nav-item {% if request.endpoint == 'settings' %}active{% endif %}">
+      <i class="bi bi-gear-fill"></i><span>Settings</span>
+    </a>
+    <a href="{{ url_for('logout') }}" class="nav-item nav-logout">
+      <i class="bi bi-box-arrow-left"></i><span>Logout</span>
+    </a>
+  </nav>
+
+  <div class="sidebar-user">
+    <div class="user-avatar-sm">
+      {% if session.get('avatar') %}
+        <img src="{{ url_for('static', filename=session.avatar) }}" alt="">
+      {% else %}
+        {{ session.get('user_name', 'U')[0].upper() }}
+      {% endif %}
+    </div>
+    <div class="user-info">
+      <div class="user-name">{{ session.get('user_name', 'User') }}</div>
+      <div class="user-role">Personal Account</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Main Content ───────────────────────────────────────────────────────────── -->
+<div class="main-wrap">
+  <!-- Top bar -->
+  <header class="topbar">
+    <button class="sidebar-toggle" id="sidebarToggle">
+      <i class="bi bi-list"></i>
+    </button>
+    <div class="topbar-title">{% block page_title %}FinanceOS{% endblock %}</div>
+    <div class="topbar-actions">
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+        <i class="bi {% if session.get('theme','dark') == 'dark' %}bi-sun-fill{% else %}bi-moon-fill{% endif %}"></i>
+      </button>
+      <div class="topbar-currency">
+        {% set cur_symbol = {'INR':'₹','USD':'$','EUR':'€','GBP':'£','JPY':'¥','CAD':'C$','AUD':'A$','SGD':'S$'} %}
+        <span>{{ cur_symbol.get(session.get('currency','INR'), '₹') }} {{ session.get('currency','INR') }}</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="page-content">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+<!-- ── Overlay for mobile sidebar ──────────────────────────────────────────── -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% block title %}Settings — FinanceOS{% endblock %}
+{% block page_title %}Settings{% endblock %}
+
+{% block content %}
+
+<div class="row g-4">
+
+  <!-- Profile Update -->
+  <div class="col-12 col-lg-6">
+    <div class="fcard">
+      <div class="section-title mb-4">Profile Settings</div>
+
+      <!-- Avatar preview -->
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
+        <div style="width:64px;height:64px;border-radius:50%;background:var(--accent);
+             display:grid;place-items:center;font-family:var(--font-head);font-size:24px;font-weight:800;color:#000;overflow:hidden;flex-shrink:0">
+          {% if user.avatar %}
+            <img src="{{ url_for('static', filename=user.avatar) }}" style="width:100%;height:100%;object-fit:cover">
+          {% else %}
+            {{ user.name[0].upper() }}
+          {% endif %}
+        </div>
+        <div>
+          <div style="font-weight:700;font-size:16px">{{ user.name }}</div>
+          <div style="font-size:13px;color:var(--text-3)">{{ user.email }}</div>
+          <div style="font-size:12px;color:var(--text-3);margin-top:2px">Member since {{ user.created_at.strftime('%b %Y') if user.created_at else '—' }}</div>
+        </div>
+      </div>
+
+      <form method="POST" action="{{ url_for('settings') }}" enctype="multipart/form-data">
+        <input type="hidden" name="action" value="update_profile">
+        <div class="mb-3">
+          <label class="form-label-custom">Full Name</label>
+          <input type="text" name="name" value="{{ user.name }}" class="form-control-custom" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label-custom">Phone</label>
+          <input type="text" name="phone" value="{{ user.phone or '' }}" class="form-control-custom">
+        </div>
+        <div class="mb-3">
+          <label class="form-label-custom">Profile Photo</label>
+          <input type="file" name="avatar" accept="image/*" class="form-control-custom" style="padding:8px 12px">
+        </div>
+        <div class="mb-3">
+          <label class="form-label-custom">Currency</label>
+          <select name="currency" class="form-control-custom">
+            {% for code, symbol in currencies.items() %}
+              <option value="{{ code }}" {% if user.currency == code %}selected{% endif %}>{{ symbol }} {{ code }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-4">
+          <label class="form-label-custom">Theme</label>
+          <select name="theme" class="form-control-custom">
+            <option value="dark" {% if user.theme == 'dark' %}selected{% endif %}>🌑 Dark</option>
+            <option value="light" {% if user.theme == 'light' %}selected{% endif %}>☀️ Light</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-accent">
+          <i class="bi bi-check-circle-fill"></i> Save Changes
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Password + Danger Zone -->
+  <div class="col-12 col-lg-6">
+    <div class="fcard mb-4">
+      <div class="section-title mb-4">Change Password</div>
+      <form method="POST" action="{{ url_for('settings') }}">
+        <input type="hidden" name="action" value="change_password">
+        <div class="mb-3">
+          <label class="form-label-custom">Current Password</label>
+          <input type="password" name="old_password" class="form-control-custom" placeholder="••••••••" required>
+        </div>
+        <div class="mb-4">
+          <label class="form-label-custom">New Password</label>
+          <input type="password" name="new_password" class="form-control-custom" placeholder="Min. 6 characters" minlength="6" required>
+        </div>
+        <button type="submit" class="btn-ghost">
+          <i class="bi bi-key-fill"></i> Update Password
+        </button>
+      </form>
+    </div>
+
+    <!-- Account Info -->
+    <div class="fcard" style="border-color:rgba(255,77,106,0.2)">
+      <div class="section-title mb-3" style="color:var(--danger)">Account Info</div>
+      <div style="font-size:13.5px;color:var(--text-2);line-height:1.7">
+        <div><span style="color:var(--text-3)">Email:</span> {{ user.email }}</div>
+        <div><span style="color:var(--text-3)">User ID:</span> #{{ user.id }}</div>
+        <div><span style="color:var(--text-3)">Currency:</span> {{ user.currency }}</div>
+        <div><span style="color:var(--text-3)">Theme:</span> {{ user.theme.title() }}</div>
+      </div>
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,77,106,0.15)">
+        <div style="font-size:12px;color:var(--text-3);margin-bottom:8px">
+          To permanently delete your account and all data, contact support.
+        </div>
+        <a href="{{ url_for('logout') }}" class="btn-danger-outline" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-size:13.5px;border-radius:9px">
+          <i class="bi bi-box-arrow-left"></i> Log Out
+        </a>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

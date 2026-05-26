@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% block title %}Budget Planner — FinanceOS{% endblock %}
+{% block page_title %}Budget Planner{% endblock %}
+
+{% block content %}
+
+<div class="row g-4">
+
+  <!-- Set Budget Form -->
+  <div class="col-12 col-lg-4">
+    <div class="fcard">
+      <div class="section-title mb-4">Set Monthly Budget</div>
+      <form method="POST" action="{{ url_for('budget') }}">
+        <input type="hidden" name="action" value="set">
+        <div class="mb-3">
+          <label class="form-label-custom">Category</label>
+          <select name="category" class="form-control-custom" required>
+            <option value="food">🍵 Food</option>
+            <option value="transport">🚗 Transport</option>
+            <option value="shopping">🛍 Shopping</option>
+            <option value="entertainment">🎬 Entertainment</option>
+            <option value="health">❤️ Health</option>
+            <option value="education">📚 Education</option>
+            <option value="utilities">⚡ Utilities</option>
+            <option value="rent">🏠 Rent</option>
+            <option value="subscriptions">💳 Subscriptions</option>
+            <option value="travel">✈️ Travel</option>
+            <option value="other">⚙️ Other</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label class="form-label-custom">Monthly Limit ({{ currency }})</label>
+          <input type="number" name="limit_amount" step="0.01" min="1" class="form-control-custom" placeholder="e.g. 5000" required>
+        </div>
+        <button type="submit" class="btn-accent w-100">
+          <i class="bi bi-check-circle-fill"></i> Set Budget
+        </button>
+      </form>
+
+      <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--text-3);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.6px;font-weight:700">Budget Tips</div>
+        <div style="font-size:13px;color:var(--text-2);line-height:1.6">
+          🟢 <strong>Under 70%</strong> — Great! You're on track.<br>
+          🟡 <strong>70–90%</strong> — Caution. Slow down spending.<br>
+          🔴 <strong>Over 90%</strong> — Budget almost exhausted!
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Budget Cards -->
+  <div class="col-12 col-lg-8">
+    {% if budgets %}
+      <div class="row g-3">
+        {% for b in budgets %}
+          {% set color = 'var(--danger)' if b.pct >= 90 else ('var(--warning)' if b.pct >= 70 else 'var(--accent)') %}
+          {% set fill_class = 'danger' if b.pct >= 90 else ('warning' if b.pct >= 70 else '') %}
+          <div class="col-12 col-sm-6">
+            <div class="fcard fcard-sm" style="border-top: 2px solid {{ color }}">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+                <div>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    {% set icons = {'food':'bi-cup-hot-fill','transport':'bi-car-front-fill','shopping':'bi-bag-fill','health':'bi-heart-pulse-fill','entertainment':'bi-film','education':'bi-book-fill','utilities':'bi-lightning-fill','rent':'bi-house-fill','subscriptions':'bi-credit-card-fill','other':'bi-three-dots'} %}
+                    <span style="width:32px;height:32px;border-radius:8px;background:var(--bg-3);display:grid;place-items:center">
+                      <i class="bi {{ icons.get(b.category, 'bi-three-dots') }}" style="color:{{ color }}"></i>
+                    </span>
+                    <div>
+                      <div style="font-weight:700;font-size:15px;text-transform:capitalize">{{ b.category }}</div>
+                      <div style="font-size:11.5px;color:var(--text-3)">{{ currency }}{{ "%.0f"|format(b.remaining) }} left</div>
+                    </div>
+                  </div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-family:var(--font-head);font-size:20px;font-weight:800;color:{{ color }}">{{ b.pct }}%</div>
+                  <form method="POST" style="display:inline" onsubmit="return confirm('Delete this budget?')">
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="bid" value="{{ b.id }}">
+                    <button type="submit" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:13px;padding:2px 4px" title="Delete">
+                      <i class="bi bi-trash3"></i>
+                    </button>
+                  </form>
+                </div>
+              </div>
+              <div class="prog-bar">
+                <div class="prog-fill {{ fill_class }}" data-width="{{ b.pct }}" style="width:0%"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-3);margin-top:5px">
+                <span>{{ currency }}{{ "%.0f"|format(b.spent) }} spent</span>
+                <span>Limit: {{ currency }}{{ "%.0f"|format(b.limit_amount) }}</span>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="fcard" style="text-align:center;padding:60px 20px">
+        <i class="bi bi-wallet2" style="font-size:48px;color:var(--text-3);display:block;margin-bottom:14px"></i>
+        <div style="font-size:16px;font-weight:600;margin-bottom:6px">No budgets set yet</div>
+        <div style="font-size:13.5px;color:var(--text-3)">Use the form to set monthly spending limits for your categories.</div>
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

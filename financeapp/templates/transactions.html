@@ -1,0 +1,303 @@
+{% extends 'base.html' %}
+{% block title %}Transactions — FinanceOS{% endblock %}
+{% block page_title %}Transactions{% endblock %}
+
+{% block content %}
+
+<!-- ── Header Row ─────────────────────────────────────────────────────────────── -->
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    <div style="font-size:13px;color:var(--text-3)">
+      Balance: <strong style="color:var(--accent);font-family:var(--font-head)">{{ currency }}{{ "%.2f"|format(balance) }}</strong>
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn-accent" onclick="openModal('income')">
+      <i class="bi bi-plus-lg"></i> Add Income
+    </button>
+    <button class="btn-ghost" onclick="openModal('expense')">
+      <i class="bi bi-dash-lg"></i> Add Expense
+    </button>
+  </div>
+</div>
+
+<!-- ── Filters ────────────────────────────────────────────────────────────────── -->
+<div class="fcard mb-4">
+  <form method="GET" action="{{ url_for('transactions') }}" class="row g-2 align-items-end">
+    <div class="col-12 col-sm-4 col-lg-3">
+      <label class="form-label-custom">Search</label>
+      <div style="position:relative">
+        <i class="bi bi-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-3)"></i>
+        <input type="text" name="search" value="{{ search }}" placeholder="Category or note…"
+          class="form-control-custom" style="padding-left:36px">
+      </div>
+    </div>
+    <div class="col-6 col-sm-4 col-lg-2">
+      <label class="form-label-custom">Type</label>
+      <select name="type" class="form-control-custom">
+        <option value="">All</option>
+        <option value="income" {% if f_type=='income' %}selected{% endif %}>Income</option>
+        <option value="expense" {% if f_type=='expense' %}selected{% endif %}>Expense</option>
+      </select>
+    </div>
+    <div class="col-6 col-sm-4 col-lg-2">
+      <label class="form-label-custom">Category</label>
+      <select name="category" class="form-control-custom">
+        <option value="">All</option>
+        {% for c in categories %}
+          <option value="{{ c }}" {% if f_cat == c %}selected{% endif %}>{{ c.title() }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-sm-4 col-lg-2">
+      <label class="form-label-custom">From</label>
+      <input type="date" name="from" value="{{ f_from }}" class="form-control-custom">
+    </div>
+    <div class="col-6 col-sm-4 col-lg-2">
+      <label class="form-label-custom">To</label>
+      <input type="date" name="to" value="{{ f_to }}" class="form-control-custom">
+    </div>
+    <div class="col-12 col-sm-auto">
+      <button type="submit" class="btn-accent">Filter</button>
+      <a href="{{ url_for('transactions') }}" class="btn-ghost ms-2">Reset</a>
+    </div>
+  </form>
+</div>
+
+<!-- ── Table ──────────────────────────────────────────────────────────────────── -->
+<div class="fcard">
+  <div class="section-head">
+    <div class="section-title">{{ total }} Transaction{% if total != 1 %}s{% endif %}</div>
+  </div>
+
+  {% if transactions %}
+  <div class="table-responsive">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Category</th>
+          <th>Amount</th>
+          <th>Note</th>
+          <th>Date</th>
+          <th style="text-align:right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% set icons = {'food':'bi-cup-hot-fill','transport':'bi-car-front-fill','shopping':'bi-bag-fill','salary':'bi-briefcase-fill','freelance':'bi-laptop-fill','health':'bi-heart-pulse-fill','entertainment':'bi-film','education':'bi-book-fill','utilities':'bi-lightning-fill','rent':'bi-house-fill','investment':'bi-graph-up-arrow','other':'bi-three-dots'} %}
+        {% for t in transactions %}
+        <tr>
+          <td>
+            <span class="badge-pill {{ 'badge-income' if t.type == 'income' else 'badge-expense' }}">
+              <i class="bi {{ 'bi-arrow-down-left' if t.type == 'income' else 'bi-arrow-up-right' }}"></i>
+              {{ t.type.title() }}
+            </span>
+          </td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="width:28px;height:28px;border-radius:7px;background:var(--bg-3);display:grid;place-items:center;font-size:13px">
+                <i class="bi {{ icons.get(t.category, 'bi-three-dots') }}"></i>
+              </span>
+              <span style="text-transform:capitalize">{{ t.category }}</span>
+            </div>
+          </td>
+          <td>
+            <span style="font-family:var(--font-head);font-weight:700;color:{{ 'var(--accent)' if t.type=='income' else 'var(--danger)' }}">
+              {% if t.type == 'income' %}+{% else %}-{% endif %}{{ currency }}{{ "%.2f"|format(t.amount) }}
+            </span>
+          </td>
+          <td style="color:var(--text-2);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.note or '—' }}</td>
+          <td style="color:var(--text-3);white-space:nowrap">{{ t.created_at.strftime('%d %b %Y') if t.created_at else '—' }}</td>
+          <td style="text-align:right;white-space:nowrap">
+            <button class="btn-ghost" style="padding:5px 10px;font-size:12px"
+              onclick="openEdit('{{ t.id }}','{{ t.category }}','{{ t.amount }}','{{ t.note or '' }}')">
+              <i class="bi bi-pencil-fill"></i>
+            </button>
+            <form method="POST" style="display:inline" onsubmit="return confirm('Delete this transaction?')">
+              <input type="hidden" name="action" value="delete">
+              <input type="hidden" name="tid" value="{{ t.id }}">
+              <button type="submit" class="btn-danger-outline" style="border-radius:8px;padding:5px 10px;font-size:12px">
+                <i class="bi bi-trash3-fill"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if total > per_page %}
+  <div style="display:flex;justify-content:center;gap:6px;margin-top:20px;flex-wrap:wrap">
+    {% for p in range(1, (total // per_page) + 2) %}
+      {% if p <= (total // per_page) + 1 %}
+      <a href="?page={{ p }}&search={{ search }}&type={{ f_type }}&category={{ f_cat }}&from={{ f_from }}&to={{ f_to }}"
+        style="width:34px;height:34px;border-radius:8px;display:grid;place-items:center;font-size:13px;font-weight:600;text-decoration:none;
+               background:{{ 'var(--accent)' if p == page else 'var(--bg-3)' }};
+               color:{{ '#000' if p == page else 'var(--text-2)' }};
+               border:1px solid {{ 'var(--accent)' if p == page else 'var(--border)' }}">
+        {{ p }}
+      </a>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% else %}
+    <div style="text-align:center;padding:48px 0;color:var(--text-3)">
+      <i class="bi bi-inbox" style="font-size:40px;display:block;margin-bottom:12px"></i>
+      <div style="font-size:15px;font-weight:600">No transactions found</div>
+      <div style="font-size:13px;margin-top:4px">Try adjusting your filters or add a transaction.</div>
+    </div>
+  {% endif %}
+</div>
+
+<!-- ── Add Transaction Modal ─────────────────────────────────────────────────── -->
+<div class="modal fade modal-custom" id="addModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title font-head" id="modalTitle">Add Transaction</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('transactions') }}">
+        <div class="modal-body">
+          <input type="hidden" name="action" value="add">
+          <div class="mb-3">
+            <label class="form-label-custom">Type</label>
+            <div style="display:flex;gap:10px">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;
+                background:var(--bg-3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;transition:all 0.2s"
+                id="incomeLabel">
+                <input type="radio" name="type" value="income" id="typeIncome" checked onchange="updateModalType()">
+                <i class="bi bi-arrow-down-left" style="color:var(--accent)"></i>
+                <span style="font-weight:600;font-size:14px">Income</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;
+                background:var(--bg-3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;transition:all 0.2s"
+                id="expenseLabel">
+                <input type="radio" name="type" value="expense" id="typeExpense" onchange="updateModalType()">
+                <i class="bi bi-arrow-up-right" style="color:var(--danger)"></i>
+                <span style="font-weight:600;font-size:14px">Expense</span>
+              </label>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label-custom">Category</label>
+            <select name="category" class="form-control-custom" required>
+              <optgroup label="Income">
+                <option value="salary">💼 Salary</option>
+                <option value="freelance">💻 Freelance</option>
+                <option value="investment">📈 Investment</option>
+                <option value="business">🏢 Business</option>
+              </optgroup>
+              <optgroup label="Expense">
+                <option value="food">🍵 Food</option>
+                <option value="transport">🚗 Transport</option>
+                <option value="shopping">🛍 Shopping</option>
+                <option value="entertainment">🎬 Entertainment</option>
+                <option value="health">❤️ Health</option>
+                <option value="education">📚 Education</option>
+                <option value="utilities">⚡ Utilities</option>
+                <option value="rent">🏠 Rent</option>
+                <option value="subscriptions">💳 Subscriptions</option>
+              </optgroup>
+              <option value="other">⚙️ Other</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label-custom">Amount ({{ currency }})</label>
+            <input type="number" name="amount" step="0.01" min="0.01" class="form-control-custom" placeholder="0.00" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label-custom">Note (optional)</label>
+            <input type="text" name="note" class="form-control-custom" placeholder="Brief description…">
+          </div>
+          <div class="mb-2">
+            <label class="form-label-custom">Date (optional)</label>
+            <input type="datetime-local" name="date" class="form-control-custom">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn-accent" id="submitBtn">
+            <i class="bi bi-plus-circle-fill"></i> Add Income
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── Edit Modal ─────────────────────────────────────────────────────────────── -->
+<div class="modal fade modal-custom" id="editModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title font-head">Edit Transaction</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('transactions') }}">
+        <div class="modal-body">
+          <input type="hidden" name="action" value="edit">
+          <input type="hidden" name="tid" id="editTid">
+          <div class="mb-3">
+            <label class="form-label-custom">Category</label>
+            <input type="text" name="category" id="editCat" class="form-control-custom" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label-custom">Amount ({{ currency }})</label>
+            <input type="number" name="amount" id="editAmt" step="0.01" class="form-control-custom" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label-custom">Note</label>
+            <input type="text" name="note" id="editNote" class="form-control-custom">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn-accent"><i class="bi bi-check-circle-fill"></i> Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openModal(type) {
+  if (type === 'expense') {
+    document.getElementById('typeExpense').checked = true;
+  } else {
+    document.getElementById('typeIncome').checked = true;
+  }
+  updateModalType();
+  new bootstrap.Modal(document.getElementById('addModal')).show();
+}
+
+function updateModalType() {
+  const isExpense = document.getElementById('typeExpense').checked;
+  const btn = document.getElementById('submitBtn');
+  const title = document.getElementById('modalTitle');
+  btn.innerHTML = isExpense
+    ? '<i class="bi bi-dash-circle-fill"></i> Add Expense'
+    : '<i class="bi bi-plus-circle-fill"></i> Add Income';
+  title.textContent = isExpense ? 'Add Expense' : 'Add Income';
+}
+
+function openEdit(tid, cat, amt, note) {
+  document.getElementById('editTid').value = tid;
+  document.getElementById('editCat').value = cat;
+  document.getElementById('editAmt').value = amt;
+  document.getElementById('editNote').value = note;
+  new bootstrap.Modal(document.getElementById('editModal')).show();
+}
+
+// Auto open modal from URL param
+const urlP = new URLSearchParams(window.location.search);
+const openType = urlP.get('open');
+if (openType) openModal(openType);
+</script>
+{% endblock %}

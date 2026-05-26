@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up — FinanceOS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    :root { --accent: #00E5A0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #0D0F14; color: #E8EAF0;
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+    }
+    .orb { position: fixed; border-radius: 50%; filter: blur(80px); opacity: 0.10; pointer-events: none; z-index: 0; }
+    .orb-1 { width: 500px; height: 500px; background: #38BEFF; top: -100px; left: -100px; }
+    .orb-2 { width: 400px; height: 400px; background: #00E5A0; bottom: -80px; right: -80px; }
+    .auth-wrap { width: 100%; max-width: 440px; padding: 24px 20px; position: relative; z-index: 1; }
+    .auth-card {
+      background: rgba(22,27,39,0.96); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 24px; padding: 38px; backdrop-filter: blur(20px);
+      box-shadow: 0 40px 80px rgba(0,0,0,0.4);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+    .brand-icon { width: 40px; height: 40px; background: var(--accent); border-radius: 11px; display: grid; place-items: center; font-size: 18px; color: #000; }
+    .brand-name { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; color: #fff; }
+    h2 { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; margin-bottom: 4px; }
+    .sub { font-size: 13.5px; color: #8B90A6; margin-bottom: 26px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 11.5px; font-weight: 700; color: #8B90A6; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; }
+    .input-wrap { position: relative; }
+    .input-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: #565B72; font-size: 15px; }
+    input {
+      width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 10px; padding: 10px 13px 10px 38px; color: #E8EAF0;
+      font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    input:focus { border-color: var(--accent); background: rgba(0,229,160,0.05); box-shadow: 0 0 0 3px rgba(0,229,160,0.1); }
+    input::placeholder { color: #565B72; }
+    .flash-msg { padding: 9px 13px; border-radius: 9px; font-size: 13px; margin-bottom: 16px; display: flex; align-items: center; gap: 7px; }
+    .flash-danger { background: rgba(255,77,106,0.1); border: 1px solid rgba(255,77,106,0.3); color: #f5cedb; }
+    .flash-success { background: rgba(0,229,160,0.1); border: 1px solid rgba(0,229,160,0.3); color: #cef5e7; }
+    .btn-submit {
+      width: 100%; background: var(--accent); color: #000;
+      border: none; border-radius: 11px; padding: 12px;
+      font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 700;
+      cursor: pointer; margin-top: 4px; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-submit:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,229,160,0.3); }
+    .switch-link { text-align: center; margin-top: 20px; font-size: 13.5px; color: #8B90A6; }
+    .switch-link a { color: var(--accent); text-decoration: none; font-weight: 600; }
+    .perks { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+    .perk { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: #8B90A6; }
+    .perk i { color: var(--accent); font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="brand">
+        <div class="brand-icon"><i class="bi bi-currency-exchange"></i></div>
+        <div class="brand-name">FinanceOS</div>
+      </div>
+      <h2>Create account</h2>
+      <p class="sub">Start managing your finances smarter</p>
+      <div class="perks">
+        <div class="perk"><i class="bi bi-check-circle-fill"></i> Free forever</div>
+        <div class="perk"><i class="bi bi-check-circle-fill"></i> Smart analytics</div>
+        <div class="perk"><i class="bi bi-check-circle-fill"></i> Goal tracking</div>
+        <div class="perk"><i class="bi bi-check-circle-fill"></i> Budget planner</div>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+          <div class="flash-msg flash-{{ cat }}"><i class="bi bi-info-circle-fill"></i> {{ msg }}</div>
+        {% endfor %}
+      {% endwith %}
+
+      <form method="POST" action="{{ url_for('signup') }}">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full Name</label>
+            <div class="input-wrap">
+              <i class="bi bi-person input-icon"></i>
+              <input type="text" name="name" placeholder="Jane Doe" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <div class="input-wrap">
+              <i class="bi bi-phone input-icon"></i>
+              <input type="text" name="phone" placeholder="+91 98765...">
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Email Address</label>
+          <div class="input-wrap">
+            <i class="bi bi-envelope input-icon"></i>
+            <input type="email" name="email" placeholder="you@example.com" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <div class="input-wrap">
+            <i class="bi bi-lock input-icon"></i>
+            <input type="password" name="password" placeholder="Min. 8 characters" required minlength="6">
+          </div>
+        </div>
+        <button type="submit" class="btn-submit">
+          <i class="bi bi-person-plus-fill"></i> Create Account
+        </button>
+      </form>
+      <div class="switch-link">
+        Already have an account? <a href="{{ url_for('login') }}">Log in</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
