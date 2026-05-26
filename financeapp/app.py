@@ -664,4 +664,4 @@ def server_error(e):
     return render_template('404.html', error="Server error"), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
