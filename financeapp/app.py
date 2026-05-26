@@ -9,6 +9,7 @@ from werkzeug.utils import secure_filename
 from functools import wraps
 from datetime import datetime, timedelta, timezone
 import os, json, calendar
+print("NEW APP VERSION LOADED")
 
 # ─── Firebase Setup ────────────────────────────────────────────────────────────
 import firebase_admin
