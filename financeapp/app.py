@@ -14,7 +14,16 @@ import os, json, calendar
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-cred = credentials.Certificate('key.json')
+import json
+
+firebase_key = os.environ.get("FIREBASE_KEY")
+
+if firebase_key:
+    cred_dict = json.loads(firebase_key)
+    cred = credentials.Certificate(cred_dict)
+else:
+    cred = credentials.Certificate("key.json")
+
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
