@@ -32,10 +32,10 @@ app = Flask(__name__, static_folder='static')
 app.secret_key = 'financeos_secret_key_change_in_production'
 
 # ─── Config ───────────────────────────────────────────────────────────────────
-UPLOAD_FOLDER = os.path.join('static', 'images', 'avatars')
+UPLOAD_FOLDER = '/tmp'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 
 CURRENCIES = {
     'INR': '₹', 'USD': '$', 'EUR': '€', 'GBP': '£',
