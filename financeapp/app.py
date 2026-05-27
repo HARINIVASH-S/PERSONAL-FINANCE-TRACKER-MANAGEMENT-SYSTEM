@@ -673,5 +673,192 @@ def not_found(e):
 def server_error(e):
     return render_template('404.html', error="Server error"), 500
 
+
+
+
+
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── AI BUDGET ADVISOR
+# ══════════════════════════════════════════════════════════════════════════════
+
+import google.generativeai as genai
+import os
+
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
+def _build_financial_context(uid):
+    """Build live financial snapshot to inject into every AI prompt."""
+    now  = datetime.now(timezone.utc)
+    ms   = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    txns = get_transactions(uid)
+    user = get_user(uid)
+    cur  = CURRENCIES.get(user.get('currency', 'INR'), '₹') if user else '₹'
+
+    balance = sum(float(t['amount']) if t.get('type') == 'income' else -float(t['amount']) for t in txns)
+    m_inc   = sum(float(t['amount']) for t in txns if t.get('type') == 'income'
+                  and isinstance(t.get('created_at'), datetime) and t['created_at'] >= ms)
+    m_exp   = sum(float(t['amount']) for t in txns if t.get('type') == 'expense'
+                  and isinstance(t.get('created_at'), datetime) and t['created_at'] >= ms)
+
+    cat_exp = {}
+    for t in txns:
+        if t.get('type') == 'expense' and isinstance(t.get('created_at'), datetime) and t['created_at'] >= ms:
+            c = t.get('category', 'other')
+            cat_exp[c] = cat_exp.get(c, 0) + float(t.get('amount', 0))
+
+    cat_lines = '\n'.join(f"  • {c.title()}: {cur}{v:,.2f}"
+                          for c, v in sorted(cat_exp.items(), key=lambda x: -x[1])[:8])
+
+    budget_docs  = db.collection('budgets').where('user_id', '==', uid).stream()
+    budget_lines = []
+    for doc in budget_docs:
+        b   = doc.to_dict()
+        cat = b.get('category', '')
+        lim = float(b.get('limit_amount', 0))
+        sp  = cat_exp.get(cat, 0)
+        pct = (sp / lim * 100) if lim else 0
+        budget_lines.append(f"  • {cat.title()}: {cur}{sp:,.0f} / {cur}{lim:,.0f} ({pct:.0f}%)")
+
+    goal_docs  = db.collection('goals').where('user_id', '==', uid).stream()
+    goal_lines = []
+    for doc in goal_docs:
+        g  = doc.to_dict()
+        sa = float(g.get('saved_amount', 0))
+        ta = float(g.get('target_amount', 1))
+        goal_lines.append(f"  • {g.get('name')}: {cur}{sa:,.0f} / {cur}{ta:,.0f} ({sa/ta*100:.0f}%)")
+
+    recent_lines = []
+    for t in txns[:5]:
+        sign = '+' if t.get('type') == 'income' else '-'
+        dt   = t['created_at'].strftime('%d %b') if isinstance(t.get('created_at'), datetime) else '—'
+        recent_lines.append(f"  {sign}{cur}{float(t.get('amount',0)):,.2f}  {t.get('category','?').title()}  ({dt})")
+
+    savings_rate = ((m_inc - m_exp) / m_inc * 100) if m_inc > 0 else 0
+
+    return f"""=== USER FINANCIAL SNAPSHOT (live) ===
+Name: {user.get('name','User') if user else 'User'} | Currency: {cur}
+Total Balance: {cur}{balance:,.2f}
+This Month — Income: {cur}{m_inc:,.2f} | Expenses: {cur}{m_exp:,.2f} | Savings: {cur}{m_inc-m_exp:,.2f} ({savings_rate:.1f}%)
+
+TOP EXPENSE CATEGORIES (this month):
+{cat_lines if cat_lines else '  (no expenses yet)'}
+
+BUDGET STATUS:
+{chr(10).join(budget_lines) if budget_lines else '  (no budgets set)'}
+
+GOALS:
+{chr(10).join(goal_lines) if goal_lines else '  (no goals set)'}
+
+RECENT TRANSACTIONS:
+{chr(10).join(recent_lines) if recent_lines else '  (none)'}
+======================================""".strip()
+
+
+ADVISOR_SYSTEM = """You are FinanceOS AI — a brilliant, warm personal finance advisor embedded in a finance app. You have the user's LIVE financial data in every message.
+
+Personality: warm, non-judgmental, highly specific — always reference the user's ACTUAL numbers.
+
+You help with: budget analysis, spending patterns, goal planning, savings strategies, debt/EMI management, investment readiness, tax-saving (India: 80C, NPS, HRA), "what if" scenarios, emergency fund sizing, monthly health scores, retirement basics.
+
+ALWAYS reference real numbers from the snapshot. NEVER give generic advice like "spend less" without tying it to their data.
+Format responses with **bold**, bullet points, and clear sections. End with 1-2 follow-up questions."""
+
+
+@app.route('/ai-advisor', methods=['GET'])
+@login_required
+def ai_advisor():
+    uid      = session['user_id']
+    ctx      = _build_financial_context(uid)
+    currency = CURRENCIES.get(session.get('currency', 'INR'), '₹')
+    return render_template('ai_advisor.html', financial_context=ctx, currency=currency)
+
+
+
+
+
+@app.route('/api/ai-chat', methods=['POST'])
+@login_required
+def ai_chat():
+    from flask import Response, stream_with_context
+
+    data = request.get_json(force=True)
+    history = data.get('messages', [])
+    new_msg = data.get('message', '').strip()
+
+    if not new_msg:
+        return jsonify({'error': 'Empty message'}), 400
+
+    uid = session['user_id']
+    ctx = _build_financial_context(uid)
+
+    prompt = f"""
+{ADVISOR_SYSTEM}
+
+{ctx}
+
+User: {new_msg}
+AI:
+"""
+
+    model = genai.GenerativeModel("gemini-1.5-flash")
+
+    def generate():
+        try:
+            response = model.generate_content(
+                prompt,
+                stream=True
+            )
+
+            for chunk in response:
+                if chunk.text:
+                    yield chunk.text
+
+        except Exception as e:
+            print("Gemini error:", e)
+            yield "⚠️ AI temporarily unavailable."
+
+    return Response(stream_with_context(generate()), mimetype='text/plain')
+
+
+
+
+
+
+
+
+@app.route('/api/ai-quick-insight', methods=['GET'])
+@login_required
+def ai_quick_insight():
+    try:
+        uid = session['user_id']
+        ctx = _build_financial_context(uid)
+
+        prompt = f"""
+{ADVISOR_SYSTEM}
+
+{ctx}
+
+Give ONE sharp financial insight in 2-3 sentences.
+Use actual numbers.
+End with one actionable suggestion.
+"""
+
+        model = genai.GenerativeModel("gemini-1.5-flash")
+
+        response = model.generate_content(prompt)
+
+        text = response.text.strip()
+
+        return jsonify({'insight': text})
+
+    except Exception as e:
+        print("AI insight error:", e)
+
+        return jsonify({
+            'insight': 'Add more transactions to unlock AI insights.'
+        })
+
 if __name__ == '__main__':
     app.run()

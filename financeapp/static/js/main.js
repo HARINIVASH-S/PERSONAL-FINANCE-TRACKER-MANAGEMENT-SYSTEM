@@ -158,3 +158,85 @@ function buildDoughnutChart(canvasId, labels, data, colors) {
     }
   });
 }
+
+
+
+/* ── AI Floating Drawer ─────────────────────────────── */
+;(function() {
+  const fab         = document.getElementById('aiFab');
+  const drawer      = document.getElementById('aiDrawer');
+  const drawerClose = document.getElementById('aiDrawerClose');
+  const drawerInput = document.getElementById('aiDrawerInput');
+  const drawerSend  = document.getElementById('aiDrawerSend');
+  const drawerMsgs  = document.getElementById('aiDrawerMessages');
+  if (!fab || !drawer) return;
+
+  const drawerHistory = [];
+  let drawerStreaming  = false;
+
+  function md(t) {
+    return t.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+            .replace(/`(.+?)`/g,'<code style="background:var(--bg-4);padding:1px 5px;border-radius:3px;font-size:12px">$1</code>')
+            .replace(/^- (.+)$/gm,'• $1').replace(/\n/g,'<br>');
+  }
+
+  fab.addEventListener('click', () => { drawer.classList.add('open'); fab.style.display='none'; });
+  drawerClose?.addEventListener('click', () => { drawer.classList.remove('open'); fab.style.display='grid'; });
+
+  function addMsg(role, text) {
+    const wrap = document.createElement('div');
+    wrap.className = `ai-msg ${role==='user'?'user':''}`;
+    const av = document.createElement('div');
+    av.className = 'ai-msg-avatar';
+    av.innerHTML = role==='ai' ? '<i class="bi bi-stars"></i>' : (window._uInit||'U');
+    const bubble = document.createElement('div');
+    bubble.className = 'ai-msg-bubble';
+    if (role==='ai') bubble.innerHTML = md(text); else bubble.textContent = text;
+    wrap.appendChild(av); wrap.appendChild(bubble);
+    drawerMsgs?.appendChild(wrap);
+    setTimeout(()=>{ if(drawerMsgs) drawerMsgs.scrollTop=drawerMsgs.scrollHeight; },30);
+    return bubble;
+  }
+
+  function showTyping() {
+    const w=document.createElement('div'); w.className='ai-msg'; w.id='dTyping';
+    w.innerHTML=`<div class="ai-msg-avatar"><i class="bi bi-stars"></i></div>
+      <div class="ai-msg-bubble"><div class="drawer-typing"><span></span><span></span><span></span></div></div>`;
+    drawerMsgs?.appendChild(w);
+    setTimeout(()=>{ if(drawerMsgs) drawerMsgs.scrollTop=drawerMsgs.scrollHeight; },30);
+  }
+
+  async function send(text) {
+    if (!text.trim() || drawerStreaming) return;
+    drawerStreaming=true; if(drawerSend) drawerSend.disabled=true;
+    if(drawerInput) drawerInput.value='';
+    addMsg('user', text.trim());
+    drawerHistory.push({role:'user',content:text.trim()});
+    showTyping();
+    try {
+      const resp = await fetch('/api/ai-chat',{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({messages:drawerHistory.slice(0,-1), message:text.trim()})
+      });
+      document.getElementById('dTyping')?.remove();
+      if (!resp.ok) throw new Error();
+      const bubble = addMsg('ai',''); bubble.innerHTML='';
+      let full='';
+      const reader=resp.body.getReader(), decoder=new TextDecoder();
+      while(true){
+        const{done,value}=await reader.read(); if(done) break;
+        full+=decoder.decode(value,{stream:true}); bubble.innerHTML=md(full);
+        if(drawerMsgs) drawerMsgs.scrollTop=drawerMsgs.scrollHeight;
+      }
+      drawerHistory.push({role:'assistant',content:full});
+    } catch(_){
+      document.getElementById('dTyping')?.remove();
+      addMsg('ai','⚠️ Something went wrong. Please try again.');
+    } finally {
+      drawerStreaming=false; if(drawerSend) drawerSend.disabled=false; if(drawerInput) drawerInput.focus();
+    }
+  }
+
+  drawerSend?.addEventListener('click', ()=>send(drawerInput?.value||''));
+  drawerInput?.addEventListener('keydown', e=>{ if(e.key==='Enter'){e.preventDefault();send(drawerInput.value);} });
+})();

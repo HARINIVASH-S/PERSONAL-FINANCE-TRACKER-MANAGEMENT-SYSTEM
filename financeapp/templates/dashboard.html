@@ -156,14 +156,21 @@
 
   <!-- AI Tip + Quick Add -->
   <div class="col-12 col-lg-3">
-    <!-- Tip -->
-    <div class="tip-box mb-3" id="spendingTip">
-      <div class="tip-icon"><i class="bi bi-lightbulb-fill"></i></div>
-      <div>
-        <div class="tip-label">Smart Tip</div>
-        <div class="tip-text">Loading your personalized tip…</div>
+
+
+
+  <!-- AI Insight -->
+    <div class="ai-insight-card mb-3">
+      <div class="ai-insight-icon"><i class="bi bi-stars"></i></div>
+      <div style="flex:1;min-width:0">
+        <div class="ai-insight-label">AI Insight</div>
+        <div class="ai-insight-text" id="aiInsightText">Analysing your finances…</div>
+        <a href="{{ url_for('ai_advisor') }}" class="ai-insight-link">Chat with AI Advisor →</a>
       </div>
     </div>
+
+
+
 
     <!-- Quick Add buttons -->
     <div class="fcard fcard-sm">
@@ -174,6 +181,9 @@
         </a>
         <a href="{{ url_for('transactions') }}?open=expense" class="btn-ghost" style="justify-content:center">
           <i class="bi bi-dash-circle-fill"></i> Add Expense
+        </a>
+        <a href="{{ url_for('ai_advisor') }}" class="btn-ghost" style="justify-content:center;border-color:rgba(0,229,160,0.3);color:var(--accent)">
+          <i class="bi bi-stars"></i> Ask AI Advisor
         </a>
         <a href="{{ url_for('analytics') }}" class="btn-ghost" style="justify-content:center">
           <i class="bi bi-bar-chart-line-fill"></i> View Analytics
@@ -187,6 +197,19 @@
 
 {% block scripts %}
 <script>
+
+
+// Load AI Quick Insight
+const aiTextEl = document.getElementById('aiInsightText');
+if (aiTextEl) {
+  fetch('/api/ai-quick-insight')
+    .then(r => r.json())
+    .then(d => { if (d.insight) aiTextEl.textContent = d.insight; })
+    .catch(() => { aiTextEl.textContent = 'Add transactions to get your AI insight.'; });
+}
+
+
+
 const cd = {{ chart_data | safe }};
 const catD = {{ cat_chart | safe }};
 const COLORS = ['#00E5A0','#38BEFF','#FF4D6A','#FFB830','#A78BFA','#FB7185','#34D399','#60A5FA'];

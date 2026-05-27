@@ -1,0 +1,586 @@
+{% extends 'base.html' %}
+{% block title %}AI Budget Advisor — FinanceOS{% endblock %}
+{% block page_title %}AI Budget Advisor{% endblock %}
+
+{% block head %}
+<style>
+/* ── AI Advisor Page ─────────────────────────────────────────────────── */
+.advisor-wrap {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+  height: calc(100vh - 120px);
+  min-height: 500px;
+}
+@media (max-width: 900px) {
+  .advisor-wrap { grid-template-columns: 1fr; height: auto; }
+  .advisor-sidebar { display: none; }
+  .advisor-chat { height: 70vh; }
+}
+
+/* Sidebar */
+.advisor-sidebar {
+  display: flex; flex-direction: column; gap: 14px;
+  overflow-y: auto;
+}
+.ai-profile-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px;
+  text-align: center;
+}
+.ai-avatar-lg {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #00E5A0, #38BEFF);
+  display: grid; place-items: center;
+  font-size: 28px; color: #000;
+  margin: 0 auto 12px;
+  box-shadow: 0 0 28px rgba(0,229,160,0.4);
+  animation: aiPulse 3s ease-in-out infinite;
+}
+@keyframes aiPulse {
+  0%,100% { box-shadow: 0 0 20px rgba(0,229,160,0.3); }
+  50%      { box-shadow: 0 0 40px rgba(0,229,160,0.6); }
+}
+.ai-name { font-family: var(--font-head); font-size: 17px; font-weight: 800; color: var(--text); }
+.ai-status { font-size: 12px; color: var(--accent); margin-top: 3px; }
+.ai-desc { font-size: 12.5px; color: var(--text-3); margin-top: 10px; line-height: 1.5; }
+
+.suggestion-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+}
+.suggestion-card h6 {
+  font-size: 11.5px; font-weight: 700; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 10px;
+}
+.suggestion-btn {
+  display: block; width: 100%;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 12px;
+  color: var(--text-2);
+  font-size: 13px; font-family: var(--font-body);
+  text-align: left; cursor: pointer;
+  margin-bottom: 7px;
+  transition: all 0.2s;
+}
+.suggestion-btn:hover { background: var(--accent-dim); color: var(--accent); border-color: rgba(0,229,160,0.3); }
+.suggestion-btn:last-child { margin-bottom: 0; }
+.suggestion-btn i { margin-right: 7px; font-size: 13px; }
+
+.capability-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+}
+.cap-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12.5px; color: var(--text-2);
+}
+.cap-item:last-child { border-bottom: none; padding-bottom: 0; }
+.cap-item i { color: var(--accent); font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+/* Chat Area */
+.advisor-chat {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  height: calc(100vh - 120px);
+  min-height: 500px;
+}
+.chat-header {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.chat-messages {
+  flex: 1; overflow-y: auto;
+  padding: 24px 22px;
+  display: flex; flex-direction: column; gap: 18px;
+  scroll-behavior: smooth;
+}
+.chat-messages::-webkit-scrollbar { width: 4px; }
+.chat-messages::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 99px; }
+
+/* Messages */
+.msg-row {
+  display: flex; gap: 12px;
+  animation: msgIn 0.3s ease both;
+}
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.msg-row.user { flex-direction: row-reverse; }
+.msg-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: grid; place-items: center;
+  flex-shrink: 0; font-size: 15px;
+}
+.msg-avatar.ai   { background: linear-gradient(135deg,#00E5A0,#38BEFF); color: #000; }
+.msg-avatar.user { background: var(--bg-4); color: var(--text-2); font-family: var(--font-head); font-weight: 800; }
+.msg-content { max-width: 75%; }
+.msg-bubble {
+  padding: 13px 16px;
+  border-radius: 16px;
+  font-size: 14px; line-height: 1.65;
+  color: var(--text);
+}
+.msg-bubble.ai {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-top-left-radius: 4px;
+}
+.msg-bubble.user {
+  background: var(--accent);
+  color: #000;
+  border-top-right-radius: 4px;
+  font-weight: 500;
+}
+.msg-time { font-size: 10.5px; color: var(--text-3); margin-top: 4px; padding: 0 4px; }
+.msg-row.user .msg-time { text-align: right; }
+
+/* Markdown rendering inside AI bubbles */
+.msg-bubble.ai strong { color: var(--accent); }
+.msg-bubble.ai ul  { padding-left: 18px; margin: 6px 0; }
+.msg-bubble.ai li  { margin-bottom: 4px; }
+.msg-bubble.ai p   { margin-bottom: 8px; }
+.msg-bubble.ai p:last-child { margin-bottom: 0; }
+.msg-bubble.ai h3, .msg-bubble.ai h4 {
+  font-family: var(--font-head); font-size: 14px; font-weight: 700;
+  margin: 10px 0 4px; color: var(--text);
+}
+.msg-bubble.ai code {
+  background: var(--bg-4); padding: 1px 5px; border-radius: 4px;
+  font-size: 12.5px; color: var(--accent);
+}
+.msg-bubble.ai hr { border-color: var(--border); margin: 10px 0; }
+
+/* Typing indicator */
+.typing-dots { display: flex; gap: 4px; padding: 4px 2px; }
+.typing-dots span {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--text-3);
+  animation: typingDot 1.2s ease-in-out infinite;
+}
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typingDot {
+  0%,60%,100% { transform: translateY(0); opacity: 0.4; }
+  30%          { transform: translateY(-6px); opacity: 1; }
+}
+
+/* Input area */
+.chat-input-area {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.chat-input-row {
+  display: flex; gap: 10px; align-items: flex-end;
+}
+.chat-textarea {
+  flex: 1; background: var(--bg-3);
+  border: 1px solid var(--border); border-radius: 14px;
+  padding: 12px 16px; color: var(--text);
+  font-family: var(--font-body); font-size: 14px;
+  resize: none; outline: none; min-height: 46px; max-height: 140px;
+  transition: border-color 0.2s;
+  line-height: 1.5;
+}
+.chat-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+.chat-textarea::placeholder { color: var(--text-3); }
+.chat-send {
+  width: 46px; height: 46px; flex-shrink: 0;
+  background: var(--accent); border: none; border-radius: 13px;
+  color: #000; font-size: 17px; cursor: pointer;
+  display: grid; place-items: center;
+  transition: all 0.2s;
+}
+.chat-send:hover { opacity: 0.9; transform: scale(1.05); }
+.chat-send:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+.chat-hint {
+  font-size: 11.5px; color: var(--text-3); margin-top: 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.chat-hint i { color: var(--accent); }
+
+/* Clear button */
+.btn-clear-chat {
+  background: none; border: 1px solid var(--border);
+  color: var(--text-3); border-radius: 8px;
+  padding: 5px 12px; font-size: 12px; cursor: pointer;
+  transition: all 0.2s; font-family: var(--font-body);
+  display: flex; align-items: center; gap: 5px;
+}
+.btn-clear-chat:hover { border-color: var(--danger); color: var(--danger); }
+
+/* Welcome banner inside chat (shown when empty) */
+.chat-welcome {
+  text-align: center; padding: 32px 20px;
+  color: var(--text-3);
+}
+.chat-welcome .cw-icon {
+  font-size: 48px; color: var(--accent); display: block;
+  margin-bottom: 12px; opacity: 0.7;
+}
+.chat-welcome h3 { font-family: var(--font-head); font-size: 20px; color: var(--text); margin-bottom: 6px; }
+.chat-welcome p { font-size: 13.5px; max-width: 380px; margin: 0 auto; }
+
+/* Token counter */
+.token-bar {
+  font-size: 11px; color: var(--text-3);
+  display: flex; align-items: center; gap: 6px;
+}
+.token-bar i { color: var(--accent); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="advisor-wrap">
+
+  <!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+  <aside class="advisor-sidebar">
+
+    <div class="ai-profile-card">
+      <div class="ai-avatar-lg"><i class="bi bi-stars"></i></div>
+      <div class="ai-name">FinanceOS AI</div>
+      <div class="ai-status">● Active — Unlimited conversations</div>
+      <div class="ai-desc">Your personal AI finance advisor with real-time access to your balance, transactions, budgets, and goals.</div>
+    </div>
+
+    <div class="suggestion-card">
+      <h6>Quick Questions</h6>
+      <button class="suggestion-btn" onclick="sendSuggestion(this)">
+        <i class="bi bi-speedometer2"></i>What's my financial health score?
+      </button>
+      <button class="suggestion-btn" onclick="sendSuggestion(this)">
+        <i class="bi bi-piggy-bank"></i>How much should I be saving monthly?
+      </button>
+      <button class="suggestion-btn" onclick="sendSuggestion(this)">
+        <i class="bi bi-graph-down-arrow"></i>Where am I overspending?
+      </button>
+      <button class="suggestion-btn" onclick="sendSuggestion(this)">
+        <i class="bi bi-trophy"></i>How can I reach my goals faster?
+      </button>
+      <button class="suggestion-btn" onclick="sendSuggestion(this)">
+        <i class="bi bi-shield-check"></i>How big should my emergency fund be?
+      </button>
+      <button class="suggestion-btn" onclick="sendSuggestion(this)">
+        <i class="bi bi-calendar-month"></i>Give me a monthly budget plan
+      </button>
+      <button class="suggestion-btn" onclick="sendSuggestion(this)">
+        <i class="bi bi-currency-rupee"></i>What are the best 80C tax saving options?
+      </button>
+      <button class="suggestion-btn" onclick="sendSuggestion(this)">
+        <i class="bi bi-rocket-takeoff"></i>Am I ready to start investing?
+      </button>
+    </div>
+
+    <div class="capability-card">
+      <h6 style="font-size:11.5px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:10px">What I can do</h6>
+      <div class="cap-item"><i class="bi bi-check-circle-fill"></i>Analyse your spending patterns</div>
+      <div class="cap-item"><i class="bi bi-check-circle-fill"></i>Build personalised budgets</div>
+      <div class="cap-item"><i class="bi bi-check-circle-fill"></i>Goal timeline projections</div>
+      <div class="cap-item"><i class="bi bi-check-circle-fill"></i>"What if" scenario modelling</div>
+      <div class="cap-item"><i class="bi bi-check-circle-fill"></i>Tax-saving strategies (India)</div>
+      <div class="cap-item"><i class="bi bi-check-circle-fill"></i>Investment readiness check</div>
+      <div class="cap-item"><i class="bi bi-check-circle-fill"></i>EMI & debt management</div>
+      <div class="cap-item"><i class="bi bi-check-circle-fill"></i>Savings challenges & hacks</div>
+    </div>
+
+  </aside>
+
+  <!-- ── Chat Area ────────────────────────────────────────────────────────── -->
+  <section class="advisor-chat">
+
+    <div class="chat-header">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="ai-avatar-sm"><i class="bi bi-stars"></i></div>
+        <div>
+          <div style="font-weight:700;font-size:15px">FinanceOS AI Advisor</div>
+          <div style="font-size:12px;color:var(--accent)">
+            ● Has access to your live financial data · Unlimited messages
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="token-bar">
+          <i class="bi bi-infinity"></i> No message limit
+        </div>
+        <button class="btn-clear-chat" id="clearChat">
+          <i class="bi bi-trash3"></i> Clear
+        </button>
+      </div>
+    </div>
+
+    <div class="chat-messages" id="chatMessages">
+      <!-- Welcome state -->
+      <div class="chat-welcome" id="chatWelcome">
+        <i class="bi bi-stars cw-icon"></i>
+        <h3>Your AI Financial Advisor</h3>
+        <p>Ask me anything about your finances. I can see your balance, spending, budgets, and goals in real time.</p>
+      </div>
+      <!-- Initial greeting message -->
+      <div class="msg-row" id="initialGreeting" style="display:none">
+        <div class="msg-avatar ai"><i class="bi bi-stars"></i></div>
+        <div class="msg-content">
+          <div class="msg-bubble ai" id="greetingBubble"></div>
+          <div class="msg-time" id="greetingTime"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-input-area">
+      <div class="chat-input-row">
+        <textarea class="chat-textarea" id="chatInput"
+          placeholder="Ask about your spending, savings, goals, budgets…"
+          rows="1"></textarea>
+        <button class="chat-send" id="chatSend">
+          <i class="bi bi-send-fill"></i>
+        </button>
+      </div>
+      <div class="chat-hint">
+        <i class="bi bi-info-circle"></i>
+        Press <kbd style="background:var(--bg-4);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:10.5px">Enter</kbd> to send,
+        <kbd style="background:var(--bg-4);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:10.5px">Shift+Enter</kbd> for new line.
+        All conversations are private to you.
+      </div>
+    </div>
+
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Markdown renderer (lightweight) ──────────────────────────────────────────
+function renderMarkdown(text) {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code>$1</code>')
+    .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+    .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>[\s\S]+?<\/li>)/g, '<ul>$1</ul>')
+    .replace(/<\/ul>\s*<ul>/g, '')
+    .replace(/^---$/gm, '<hr>')
+    .replace(/\n{2,}/g, '</p><p>')
+    .replace(/\n/g, '<br>')
+    .replace(/^(.+)$/, '<p>$1</p>');
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+const conversationHistory = [];  // full chat history for context
+let isStreaming = false;
+const userName = "{{ session.get('user_name', 'You')[0].upper() }}";
+
+const messagesEl  = document.getElementById('chatMessages');
+const inputEl     = document.getElementById('chatInput');
+const sendBtn     = document.getElementById('chatSend');
+const welcomeEl   = document.getElementById('chatWelcome');
+const greetingEl  = document.getElementById('initialGreeting');
+
+// ── Time helper ───────────────────────────────────────────────────────────────
+function nowTime() {
+  return new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ── Scroll to bottom ──────────────────────────────────────────────────────────
+function scrollBottom() {
+  setTimeout(() => { messagesEl.scrollTop = messagesEl.scrollHeight; }, 50);
+}
+
+// ── Append message ────────────────────────────────────────────────────────────
+function appendMsg(role, content, animate = true) {
+  welcomeEl.style.display = 'none';
+
+  const row = document.createElement('div');
+  row.className = `msg-row ${role}`;
+  if (!animate) row.style.animation = 'none';
+
+  const avatar = document.createElement('div');
+  avatar.className = `msg-avatar ${role}`;
+  avatar.innerHTML = role === 'ai'
+    ? '<i class="bi bi-stars"></i>'
+    : userName;
+
+  const content_wrap = document.createElement('div');
+  content_wrap.className = 'msg-content';
+
+  const bubble = document.createElement('div');
+  bubble.className = `msg-bubble ${role}`;
+  if (role === 'ai') {
+    bubble.innerHTML = renderMarkdown(content);
+  } else {
+    bubble.textContent = content;
+  }
+
+  const time = document.createElement('div');
+  time.className = 'msg-time';
+  time.textContent = nowTime();
+
+  content_wrap.appendChild(bubble);
+  content_wrap.appendChild(time);
+  row.appendChild(avatar);
+  row.appendChild(content_wrap);
+  messagesEl.appendChild(row);
+  scrollBottom();
+  return { row, bubble };
+}
+
+// ── Typing indicator ──────────────────────────────────────────────────────────
+function showTyping() {
+  const row = document.createElement('div');
+  row.className = 'msg-row';
+  row.id = 'typingRow';
+  row.innerHTML = `
+    <div class="msg-avatar ai"><i class="bi bi-stars"></i></div>
+    <div class="msg-content">
+      <div class="msg-bubble ai" style="padding:12px 16px">
+        <div class="typing-dots"><span></span><span></span><span></span></div>
+      </div>
+    </div>`;
+  messagesEl.appendChild(row);
+  scrollBottom();
+}
+
+function hideTyping() {
+  document.getElementById('typingRow')?.remove();
+}
+
+// ── Send message ──────────────────────────────────────────────────────────────
+async function sendMessage(text) {
+  if (!text.trim() || isStreaming) return;
+  isStreaming = true;
+  sendBtn.disabled = true;
+  inputEl.value = '';
+  inputEl.style.height = 'auto';
+
+  // Show user message
+  appendMsg('user', text.trim());
+  conversationHistory.push({ role: 'user', content: text.trim() });
+
+  // Show typing
+  showTyping();
+
+  try {
+    const resp = await fetch('/api/ai-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: conversationHistory.slice(0, -1), // history before this msg
+        message:  text.trim()
+      })
+    });
+
+    hideTyping();
+
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+    // Streaming response
+    const { row, bubble } = appendMsg('ai', '');
+    bubble.innerHTML = '';
+    let fullText = '';
+
+    const reader  = resp.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      fullText += chunk;
+      bubble.innerHTML = renderMarkdown(fullText);
+      scrollBottom();
+    }
+
+    conversationHistory.push({ role: 'assistant', content: fullText });
+
+  } catch (err) {
+    hideTyping();
+    appendMsg('ai', '⚠️ Something went wrong. Please try again.');
+    console.error(err);
+  } finally {
+    isStreaming = false;
+    sendBtn.disabled = false;
+    inputEl.focus();
+  }
+}
+
+// ── Event listeners ───────────────────────────────────────────────────────────
+sendBtn.addEventListener('click', () => sendMessage(inputEl.value));
+
+inputEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage(inputEl.value);
+  }
+});
+
+// Auto-resize textarea
+inputEl.addEventListener('input', () => {
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + 'px';
+});
+
+// Clear chat
+document.getElementById('clearChat').addEventListener('click', () => {
+  if (confirm('Clear this conversation?')) {
+    conversationHistory.length = 0;
+    // Remove all msg-row elements
+    messagesEl.querySelectorAll('.msg-row').forEach(el => el.remove());
+    welcomeEl.style.display = 'block';
+  }
+});
+
+// ── Suggestion buttons ────────────────────────────────────────────────────────
+function sendSuggestion(btn) {
+  const text = btn.textContent.trim();
+  sendMessage(text);
+  inputEl.focus();
+}
+
+// ── Load greeting on page open ────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  // Quick personalised greeting using the quick-insight endpoint
+  try {
+    const r = await fetch('/api/ai-quick-insight');
+    const d = await r.json();
+    if (d.insight) {
+      greetingEl.style.display = 'flex';
+      welcomeEl.style.display  = 'none';
+      document.getElementById('greetingBubble').innerHTML =
+        renderMarkdown('👋 Hello! Here\'s a quick insight based on your data:\n\n' + d.insight + '\n\n---\nAsk me anything to dive deeper!');
+      document.getElementById('greetingTime').textContent = nowTime();
+      conversationHistory.push({
+        role: 'assistant',
+        content: 'Hello! Here\'s a quick insight based on your data:\n\n' + d.insight + '\n\nAsk me anything to dive deeper!'
+      });
+    }
+  } catch (_) {
+    // Fallback static greeting
+    greetingEl.style.display = 'flex';
+    welcomeEl.style.display  = 'none';
+    document.getElementById('greetingBubble').innerHTML =
+      '👋 Hi! I\'m your AI Budget Advisor. I can see your live financial data — ask me anything about your spending, savings, budgets, or goals!';
+    document.getElementById('greetingTime').textContent = nowTime();
+  }
+  inputEl.focus();
+});
+</script>
+{% endblock %}

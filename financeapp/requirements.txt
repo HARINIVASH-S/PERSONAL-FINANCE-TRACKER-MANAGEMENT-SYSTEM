@@ -1,4 +1,4 @@
 Flask==3.0.0
-mysql-connector-python==8.2.0
 Werkzeug==3.0.1
-firebase-admin
+firebase-admin>=6.0.0
+google-generativeai>=0.7.2
