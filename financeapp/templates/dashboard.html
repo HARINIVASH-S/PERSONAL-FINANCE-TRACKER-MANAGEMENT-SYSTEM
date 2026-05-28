@@ -201,11 +201,10 @@
 
 // Load AI Quick Insight
 const aiTextEl = document.getElementById('aiInsightText');
+
 if (aiTextEl) {
-  fetch('/api/ai-quick-insight')
-    .then(r => r.json())
-    .then(d => { if (d.insight) aiTextEl.textContent = d.insight; })
-    .catch(() => { aiTextEl.textContent = 'Add transactions to get your AI insight.'; });
+  aiTextEl.textContent =
+    'AI insight temporarily disabled to save free Gemini quota.';
 }
 
 

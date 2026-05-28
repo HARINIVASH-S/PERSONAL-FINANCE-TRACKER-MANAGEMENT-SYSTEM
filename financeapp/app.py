@@ -680,13 +680,14 @@ def server_error(e):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # ── AI BUDGET ADVISOR
 # ══════════════════════════════════════════════════════════════════════════════
 
-import google.generativeai as genai
+from groq import Groq
 import os
-
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 def _build_financial_context(uid):
     """Build live financial snapshot to inject into every AI prompt."""
@@ -775,90 +776,73 @@ def ai_advisor():
     return render_template('ai_advisor.html', financial_context=ctx, currency=currency)
 
 
-
-
-
 @app.route('/api/ai-chat', methods=['POST'])
 @login_required
 def ai_chat():
     from flask import Response, stream_with_context
 
-    data = request.get_json(force=True)
+    data    = request.get_json(force=True)
     history = data.get('messages', [])
     new_msg = data.get('message', '').strip()
 
     if not new_msg:
         return jsonify({'error': 'Empty message'}), 400
 
-    uid = session['user_id']
-    ctx = _build_financial_context(uid)
+    uid    = session['user_id']
+    ctx    = _build_financial_context(uid)
+    system = ADVISOR_SYSTEM + "\n\n" + ctx
 
-    prompt = f"""
-{ADVISOR_SYSTEM}
+    # Build messages with full conversation history
+    messages = [{"role": "system", "content": system}]
+    for msg in history:
+        messages.append({"role": msg["role"], "content": msg["content"]})
+    messages.append({"role": "user", "content": new_msg})
 
-{ctx}
-
-User: {new_msg}
-AI:
-"""
-
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    ai_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
     def generate():
         try:
-            response = model.generate_content(
-                prompt,
+            stream = ai_client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=messages,
+                max_tokens=1500,
                 stream=True
             )
-
-            for chunk in response:
-                if chunk.text:
-                    yield chunk.text
-
+            for chunk in stream:
+                text = chunk.choices[0].delta.content
+                if text:
+                    yield text
         except Exception as e:
-            print("Gemini error:", e)
-            yield "⚠️ AI temporarily unavailable."
+            print("Groq error:", e)
+            yield "⚠️ AI temporarily unavailable. Please try again."
 
     return Response(stream_with_context(generate()), mimetype='text/plain')
-
-
-
-
-
-
 
 
 @app.route('/api/ai-quick-insight', methods=['GET'])
 @login_required
 def ai_quick_insight():
     try:
-        uid = session['user_id']
-        ctx = _build_financial_context(uid)
+        uid    = session['user_id']
+        ctx    = _build_financial_context(uid)
+        system = ADVISOR_SYSTEM + "\n\n" + ctx
 
-        prompt = f"""
-{ADVISOR_SYSTEM}
-
-{ctx}
-
-Give ONE sharp financial insight in 2-3 sentences.
-Use actual numbers.
-End with one actionable suggestion.
-"""
-
-        model = genai.GenerativeModel("gemini-1.5-flash")
-
-        response = model.generate_content(prompt)
-
-        text = response.text.strip()
-
+        ai_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+        response  = ai_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user",   "content": "Give ONE sharp financial insight in 2-3 sentences using actual numbers. End with one actionable suggestion. No intro or sign-off."}
+            ],
+            max_tokens=200
+        )
+        text = response.choices[0].message.content.strip()
         return jsonify({'insight': text})
 
     except Exception as e:
         print("AI insight error:", e)
+        return jsonify({'insight': 'Add more transactions to unlock AI insights.'})
 
-        return jsonify({
-            'insight': 'Add more transactions to unlock AI insights.'
-        })
 
 if __name__ == '__main__':
     app.run()
